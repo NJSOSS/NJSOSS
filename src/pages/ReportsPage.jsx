@@ -1,118 +1,109 @@
-import { useState } from 'react';
-import { useReportStore } from '../store/reportStore';
-import ReportCard from '../components/Reports/ReportCard';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Plus, BarChart2 } from 'lucide-react';
+import ReportFeed from '../components/Reports/ReportFeed';
 import ReportForm from '../components/Reports/ReportForm';
-import { STAR_SYSTEMS } from '../data/starSystems';
-import { Filter, Plus, AlertTriangle, Search } from 'lucide-react';
+import StatsPanel from '../components/Dashboard/StatsPanel';
+import { useAuthStore } from '../store/authStore';
 
-const THREAT_LABELS = { 1: 'Low', 2: 'Guarded', 3: 'Elevated', 4: 'High', 5: 'Extreme' };
-
-export default function ReportsPage() {
-  const { reports } = useReportStore();
+export default function ReportsPage({ onAuthRequired }) {
+  const user = useAuthStore((s) => s.user);
   const [showForm, setShowForm] = useState(false);
-  const [filterSystem, setFilterSystem] = useState('all');
-  const [filterThreat, setFilterThreat] = useState(0);
-  const [filterVerified, setFilterVerified] = useState(false);
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
+  const [view, setView] = useState('feed'); // 'feed' | 'stats'
 
-  let filtered = [...reports];
-  if (filterSystem !== 'all') filtered = filtered.filter(r => r.system === filterSystem);
-  if (filterThreat > 0) filtered = filtered.filter(r => r.threatLevel >= filterThreat);
-  if (filterVerified) filtered = filtered.filter(r => r.verified);
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(r =>
-      r.location?.toLowerCase().includes(q) ||
-      r.description?.toLowerCase().includes(q) ||
-      r.orgTag?.toLowerCase().includes(q) ||
-      r.reportedBy?.toLowerCase().includes(q)
-    );
-  }
-
-  if (sortBy === 'newest') filtered.sort((a, b) => b.timestamp - a.timestamp);
-  else if (sortBy === 'threat') filtered.sort((a, b) => b.threatLevel - a.threatLevel);
-  else if (sortBy === 'upvotes') filtered.sort((a, b) => b.upvotes - a.upvotes);
-
-  const selectStyle = {
-    background: '#060f1a', border: '1px solid #0d2535', color: '#8fb8cc',
-    padding: '6px 10px', fontSize: '11px', fontFamily: 'inherit',
-    outline: 'none', borderRadius: '2px', cursor: 'pointer',
+  const handleReport = () => {
+    if (!user) { onAuthRequired(); return; }
+    setShowForm(true);
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#030912' }}>
-      {/* Toolbar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px',
-        borderBottom: '1px solid #0d2535', background: 'rgba(6,15,26,0.95)',
-        backdropFilter: 'blur(8px)', flexWrap: 'wrap', flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
-          <AlertTriangle size={14} color="#ff2233" />
-          <span style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '11px', color: '#00d4ff', letterSpacing: '0.1em' }}>
-            INTEL FEED
-          </span>
-          <span style={{ fontSize: '10px', color: '#4a7a8c', marginLeft: '4px' }}>({filtered.length})</span>
-        </div>
-
-        {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#060f1a', border: '1px solid #0d2535', padding: '5px 10px', flex: '1', minWidth: '180px', maxWidth: '260px' }}>
-          <Search size={11} color="#4a7a8c" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search reports..." style={{ background: 'none', border: 'none', color: '#8fb8cc', fontSize: '11px', outline: 'none', width: '100%', fontFamily: 'inherit' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Filter size={11} color="#4a7a8c" />
-          <select style={selectStyle} value={filterSystem} onChange={e => setFilterSystem(e.target.value)}>
-            <option value="all">All Systems</option>
-            {STAR_SYSTEMS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <select style={selectStyle} value={filterThreat} onChange={e => setFilterThreat(+e.target.value)}>
-            <option value={0}>All Threats</option>
-            {Object.entries(THREAT_LABELS).map(([k, v]) => <option key={k} value={k}>≥ {v}</option>)}
-          </select>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#4a7a8c', cursor: 'pointer' }}>
-            <input type="checkbox" checked={filterVerified} onChange={e => setFilterVerified(e.target.checked)} />
-            Verified
-          </label>
-        </div>
-
-        <select style={selectStyle} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <option value="newest">Newest</option>
-          <option value="threat">Threat Level</option>
-          <option value="upvotes">Most Upvoted</option>
-        </select>
-
-        <button onClick={() => setShowForm(true)} style={{
-          marginLeft: 'auto', background: 'rgba(255,34,51,0.1)', border: '1px solid #ff2233',
-          color: '#ff2233', padding: '6px 14px', cursor: 'pointer',
-          fontFamily: 'Orbitron, sans-serif', fontSize: '9px', letterSpacing: '0.1em',
-          display: 'flex', alignItems: 'center', gap: '6px',
-        }}>
-          <Plus size={11} /> REPORT
-        </button>
-      </div>
-
-      {/* Report list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#4a7a8c', fontSize: '12px', padding: '60px' }}>
-            <AlertTriangle size={32} style={{ marginBottom: '12px', opacity: 0.4 }} />
-            <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '11px', letterSpacing: '0.1em' }}>
-              NO REPORTS MATCH FILTERS
+    <div className="flex flex-col" style={{ paddingTop: '72px', height: '100vh', background: '#030912' }}>
+      {/* Page header */}
+      <div className="glass border-b px-6 py-3 flex items-center justify-between" style={{ borderColor: '#0d2535' }}>
+        <div className="flex items-center gap-4">
+          <div>
+            <div className="font-orbitron text-sm font-bold tracking-widest" style={{ color: '#00d4ff', letterSpacing: '0.15em' }}>
+              PIRATE INTEL DATABASE
+            </div>
+            <div className="text-xs" style={{ color: '#8fb8cc', fontSize: '0.65rem', letterSpacing: '0.1em' }}>
+              NETWORK JURISDICTION SECURITY OPERATIONS SUPPORT SYSTEM
             </div>
           </div>
-        ) : (
-          <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-            {filtered.map(r => <ReportCard key={r.id} report={r} />)}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex rounded border overflow-hidden" style={{ borderColor: '#0d2535' }}>
+            {[
+              { id: 'feed', label: 'FEED' },
+              { id: 'stats', label: 'STATS' },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className="px-4 py-1.5 text-xs font-orbitron tracking-widest transition-all"
+                style={{
+                  color: view === id ? '#00d4ff' : '#8fb8cc',
+                  background: view === id ? 'rgba(0,212,255,0.1)' : 'transparent',
+                  borderRight: id === 'feed' ? '1px solid #0d2535' : 'none',
+                  letterSpacing: '0.1em',
+                  fontSize: '0.65rem',
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+
+          <button
+            onClick={handleReport}
+            className="flex items-center gap-2 px-4 py-2 font-orbitron text-xs rounded transition-all"
+            style={{
+              border: '1px solid rgba(255,34,51,0.6)',
+              color: '#ff2233',
+              background: 'rgba(255,34,51,0.08)',
+              letterSpacing: '0.1em',
+              boxShadow: '0 0 15px rgba(255,34,51,0.1)',
+            }}
+          >
+            <Plus size={12} />
+            SUBMIT REPORT
+          </button>
+        </div>
       </div>
 
-      {showForm && <ReportForm onClose={() => setShowForm(false)} />}
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        <AnimatePresence mode="wait">
+          {view === 'feed' ? (
+            <motion.div
+              key="feed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full max-w-3xl mx-auto"
+            >
+              <ReportFeed />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="stats"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full max-w-4xl mx-auto"
+            >
+              <StatsPanel />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence>
+        {showForm && (
+          <ReportForm onClose={() => setShowForm(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

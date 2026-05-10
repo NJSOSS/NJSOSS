@@ -1,228 +1,338 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Layers, AlertTriangle, Map, X, Info, ChevronRight, Globe,
+  Radio, ZoomIn, Eye, EyeOff
+} from 'lucide-react';
 import StarMap3D from '../components/StarMap/StarMap3D';
-import ReportForm from '../components/Reports/ReportForm';
 import ReportFeed from '../components/Reports/ReportFeed';
 import StatsPanel from '../components/Dashboard/StatsPanel';
+import ReportForm from '../components/Reports/ReportForm';
 import { useReportStore } from '../store/reportStore';
-import { STAR_SYSTEMS, getDangerColor } from '../data/starSystems';
-import { AlertTriangle, Thermometer, ChevronLeft, Map, BarChart2, Plus, Info, X } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { STAR_SYSTEMS } from '../data/starSystems';
+import { getDangerColor } from '../data/starSystems';
 
-export default function MapPage() {
-  const [showHeatmap, setShowHeatmap] = useState(false);
-  const [showReport, setShowReport] = useState(false);
-  const [selectedSystem, setSelectedSystem] = useState(null);
-  const [rightPanel, setRightPanel] = useState('feed'); // 'feed' | 'stats'
-  const { reports } = useReportStore();
+const DANGER_COLORS = { 1: '#00ff88', 2: '#aaff00', 3: '#ffdd00', 4: '#ff7700', 5: '#ff2233' };
 
-  const systemReports = selectedSystem
-    ? reports.filter(r => r.system === selectedSystem.id)
-    : [];
+export default function MapPage({ onAuthRequired }) {
+  const selectedSystem = useReportStore((s) => s.selectedSystem);
+  const setSelectedSystem = useReportStore((s) => s.setSelectedSystem);
+  const showHeatmap = useReportStore((s) => s.showHeatmap);
+  const setShowHeatmap = useReportStore((s) => s.setShowHeatmap);
+  const getReportsBySystem = useReportStore((s) => s.getReportsBySystem);
+  const user = useAuthStore((s) => s.user);
+
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [leftPanel, setLeftPanel] = useState('info'); // 'info' | 'stats'
+  const [showRightPanel, setShowRightPanel] = useState(true);
+
+  const handleReportClick = () => {
+    if (!user) { onAuthRequired(); return; }
+    setShowReportForm(true);
+  };
+
+  const systemReports = selectedSystem ? getReportsBySystem(selectedSystem.id) : [];
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' }}>
-      {/* Left panel - system info */}
-      <div style={{
-        width: '240px', flexShrink: 0, background: 'rgba(6,15,26,0.95)',
-        borderRight: '1px solid #0d2535', display: 'flex', flexDirection: 'column',
-        backdropFilter: 'blur(12px)', zIndex: 10,
-      }}>
-        {/* Controls */}
-        <div style={{ padding: '12px', borderBottom: '1px solid #0d2535' }}>
-          <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#4a7a8c', letterSpacing: '0.1em', marginBottom: '10px' }}>
-            MAP CONTROLS
-          </div>
-          <button onClick={() => setShowHeatmap(h => !h)} style={{
-            width: '100%', padding: '8px 12px', marginBottom: '6px',
-            background: showHeatmap ? 'rgba(255,119,0,0.15)' : 'transparent',
-            border: `1px solid ${showHeatmap ? '#ff7700' : '#0d2535'}`,
-            color: showHeatmap ? '#ff7700' : '#4a7a8c',
-            cursor: 'pointer', fontFamily: 'Orbitron, sans-serif', fontSize: '9px', letterSpacing: '0.1em',
-            display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s',
-          }}>
-            <Thermometer size={12} /> {showHeatmap ? 'HIDE HEATMAP' : 'SHOW HEATMAP'}
-          </button>
-          <button onClick={() => setShowReport(true)} style={{
-            width: '100%', padding: '8px 12px',
-            background: 'rgba(255,34,51,0.1)', border: '1px solid #ff2233',
-            color: '#ff2233', cursor: 'pointer',
-            fontFamily: 'Orbitron, sans-serif', fontSize: '9px', letterSpacing: '0.1em',
-            display: 'flex', alignItems: 'center', gap: '8px',
-          }}>
-            <Plus size={12} /> REPORT PIRATES
-          </button>
-        </div>
-
-        {/* Selected system info */}
-        {selectedSystem ? (
-          <div style={{ padding: '12px', flex: 1, overflowY: 'auto' }}>
-            <button onClick={() => setSelectedSystem(null)} style={{
-              background: 'transparent', border: 'none', color: '#4a7a8c',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
-              fontSize: '10px', marginBottom: '12px', padding: 0,
-            }}>
-              <ChevronLeft size={12} /> BACK TO GALAXY
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: selectedSystem.starColor, boxShadow: `0 0 8px ${selectedSystem.starColor}` }} />
-              <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '13px', color: '#00d4ff' }}>
-                {selectedSystem.name.toUpperCase()}
-              </div>
-            </div>
-
-            <div style={{ fontSize: '10px', color: '#4a7a8c', marginBottom: '6px' }}>{selectedSystem.type}</div>
-            <div style={{
-              display: 'inline-flex', padding: '3px 8px', marginBottom: '10px',
-              border: `1px solid ${getDangerColor(selectedSystem.dangerLevel)}`,
-              color: getDangerColor(selectedSystem.dangerLevel),
-              fontFamily: 'Orbitron, sans-serif', fontSize: '9px', borderRadius: '2px',
-            }}>
-              {'●'.repeat(selectedSystem.dangerLevel)} DANGER {selectedSystem.dangerLevel}/5
-            </div>
-
-            <p style={{ fontSize: '11px', color: '#8fb8cc', lineHeight: '1.6', marginBottom: '12px' }}>
-              {selectedSystem.description}
-            </p>
-
-            <div style={{ borderTop: '1px solid #0d2535', paddingTop: '10px', marginBottom: '10px' }}>
-              <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#4a7a8c', marginBottom: '6px' }}>PLANETS</div>
-              {(selectedSystem.planets || []).map(p => (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: '10px', color: '#8fb8cc' }}>{p.name}</span>
-                  {p.stations?.length > 0 && <span style={{ fontSize: '9px', color: '#4a7a8c' }}>({p.stations.length} stations)</span>}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ borderTop: '1px solid #0d2535', paddingTop: '10px' }}>
-              <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#ff2233', marginBottom: '6px' }}>
-                PIRATE REPORTS: {systemReports.length}
-              </div>
-              {systemReports.slice(0, 3).map(r => (
-                <div key={r.id} style={{
-                  padding: '6px 8px', background: 'rgba(255,34,51,0.05)',
-                  border: '1px solid rgba(255,34,51,0.15)', borderRadius: '2px', marginBottom: '4px',
-                }}>
-                  <div style={{ fontSize: '9px', color: '#ff7700', marginBottom: '2px' }}>{r.location}</div>
-                  <div style={{ fontSize: '9px', color: '#4a7a8c' }}>{r.pirateCount} pirates spotted</div>
-                </div>
-              ))}
-              {systemReports.length > 3 && (
-                <div style={{ fontSize: '9px', color: '#4a7a8c', textAlign: 'center', marginTop: '4px' }}>
-                  +{systemReports.length - 3} more reports
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div style={{ padding: '12px', flex: 1, overflowY: 'auto' }}>
-            <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#4a7a8c', letterSpacing: '0.1em', marginBottom: '10px' }}>
-              SYSTEM THREAT STATUS
-            </div>
-            {STAR_SYSTEMS.map(sys => {
-              const count = reports.filter(r => r.system === sys.id).length;
-              return (
-                <button key={sys.id} onClick={() => setSelectedSystem(sys)} style={{
-                  width: '100%', padding: '8px 10px', marginBottom: '4px',
-                  background: 'transparent', border: '1px solid #0d2535',
-                  borderLeft: `2px solid ${getDangerColor(sys.dangerLevel)}`,
-                  cursor: 'pointer', textAlign: 'left', borderRadius: '2px',
-                  transition: 'all 0.15s',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '10px', color: '#8fb8cc' }}>{sys.name}</span>
-                    {count > 0 && (
-                      <span style={{ fontSize: '9px', color: '#ff2233', fontFamily: 'Orbitron, sans-serif' }}>
-                        {count} ●
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '9px', color: '#4a7a8c', marginTop: '2px' }}>{sys.status}</div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+    <div className="fixed inset-0" style={{ paddingTop: '72px', background: '#030912' }}>
+      {/* Full screen map */}
+      <div className="absolute inset-0" style={{ top: '72px' }}>
+        <StarMap3D />
       </div>
 
-      {/* 3D Map - center */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        <StarMap3D
-          showHeatmap={showHeatmap}
-          selectedSystem={selectedSystem}
-          onSystemSelect={(sys) => setSelectedSystem(sys)}
-        />
-
-        {/* Map overlay info */}
-        <div style={{
-          position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(6,15,26,0.85)', border: '1px solid #0d2535',
-          padding: '8px 20px', backdropFilter: 'blur(8px)',
-          fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#4a7a8c',
-          letterSpacing: '0.08em', pointerEvents: 'none',
-          display: 'flex', gap: '20px',
-        }}>
-          <span>SCROLL: ZOOM</span>
-          <span>DRAG: ROTATE</span>
-          <span>CLICK SYSTEM: SELECT</span>
-          {showHeatmap && <span style={{ color: '#ff7700' }}>⬤ HEATMAP ACTIVE</span>}
-        </div>
-
-        {/* Alert banner for extreme threats */}
-        {reports.some(r => r.threatLevel === 5) && (
-          <div style={{
-            position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(255,34,51,0.1)', border: '1px solid rgba(255,34,51,0.4)',
-            padding: '6px 16px', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', gap: '8px',
-            animation: 'pulse-danger 2s infinite',
-          }}>
-            <AlertTriangle size={12} color="#ff2233" />
-            <span style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', color: '#ff2233', letterSpacing: '0.1em' }}>
-              EXTREME THREAT ACTIVE — {reports.filter(r => r.threatLevel === 5).length} CRITICAL REPORTS
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Right panel */}
-      <div style={{
-        width: '300px', flexShrink: 0, background: 'rgba(6,15,26,0.95)',
-        borderLeft: '1px solid #0d2535', display: 'flex', flexDirection: 'column',
-        backdropFilter: 'blur(12px)', zIndex: 10,
-      }}>
+      {/* Left Panel */}
+      <div className="absolute left-0 top-0 bottom-0 w-72 flex flex-col z-10" style={{ paddingTop: 0 }}>
         {/* Panel tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #0d2535', flexShrink: 0 }}>
+        <div className="flex glass border-r border-b" style={{ borderColor: '#0d2535' }}>
           {[
-            { id: 'feed', label: 'INTEL FEED', icon: AlertTriangle },
-            { id: 'stats', label: 'STATISTICS', icon: BarChart2 },
+            { id: 'info', label: 'INTEL', icon: Info },
+            { id: 'stats', label: 'STATS', icon: Radio },
           ].map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setRightPanel(id)} style={{
-              flex: 1, padding: '10px',
-              background: rightPanel === id ? 'rgba(0,212,255,0.05)' : 'transparent',
-              border: 'none', borderBottom: rightPanel === id ? '2px solid #00d4ff' : '2px solid transparent',
-              color: rightPanel === id ? '#00d4ff' : '#4a7a8c',
-              cursor: 'pointer', fontFamily: 'Orbitron, sans-serif', fontSize: '9px', letterSpacing: '0.08em',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              transition: 'all 0.2s',
-            }}>
-              <Icon size={11} /> {label}
+            <button
+              key={id}
+              onClick={() => setLeftPanel(id)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-orbitron tracking-widest transition-all"
+              style={{
+                color: leftPanel === id ? '#00d4ff' : '#8fb8cc',
+                borderBottom: leftPanel === id ? '2px solid #00d4ff' : '2px solid transparent',
+                background: leftPanel === id ? 'rgba(0,212,255,0.05)' : 'transparent',
+                letterSpacing: '0.1em',
+                fontSize: '0.65rem',
+              }}
+            >
+              <Icon size={11} />
+              {label}
             </button>
           ))}
         </div>
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          {rightPanel === 'feed' ? <ReportFeed compact /> : <StatsPanel />}
+
+        <div className="flex-1 glass border-r overflow-hidden" style={{ borderColor: '#0d2535' }}>
+          <AnimatePresence mode="wait">
+            {leftPanel === 'info' ? (
+              <motion.div
+                key="info"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full overflow-y-auto"
+              >
+                {/* Controls */}
+                <div className="p-3 border-b space-y-2" style={{ borderColor: '#0d2535' }}>
+                  <button
+                    onClick={handleReportClick}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 font-orbitron text-xs rounded transition-all"
+                    style={{
+                      border: '1px solid rgba(255,34,51,0.6)',
+                      color: '#ff2233',
+                      background: 'rgba(255,34,51,0.08)',
+                      letterSpacing: '0.1em',
+                      boxShadow: '0 0 15px rgba(255,34,51,0.1)',
+                    }}
+                  >
+                    <AlertTriangle size={12} />
+                    REPORT PIRATES
+                  </button>
+
+                  <button
+                    onClick={() => setShowHeatmap(!showHeatmap)}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-orbitron rounded transition-all"
+                    style={{
+                      border: `1px solid ${showHeatmap ? 'rgba(255,119,0,0.6)' : '#0d2535'}`,
+                      color: showHeatmap ? '#ff7700' : '#8fb8cc',
+                      background: showHeatmap ? 'rgba(255,119,0,0.08)' : 'transparent',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    {showHeatmap ? <EyeOff size={12} /> : <Eye size={12} />}
+                    {showHeatmap ? 'HIDE HEATMAP' : 'THREAT HEATMAP'}
+                  </button>
+                </div>
+
+                {/* Selected system info */}
+                {selectedSystem ? (
+                  <div className="p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-orbitron text-sm font-bold" style={{ color: '#00d4ff', letterSpacing: '0.1em' }}>
+                        {selectedSystem.name}
+                      </div>
+                      <button onClick={() => setSelectedSystem(null)} style={{ color: '#8fb8cc' }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span style={{ color: '#8fb8cc' }}>Type</span>
+                        <span style={{ color: '#e2e8f0' }}>{selectedSystem.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: '#8fb8cc' }}>Status</span>
+                        <span style={{ color: '#00d4ff' }}>{selectedSystem.status}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span style={{ color: '#8fb8cc' }}>Danger</span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex gap-0.5">
+                            {[1,2,3,4,5].map((n) => {
+                              const color = DANGER_COLORS[selectedSystem.dangerLevel];
+                              return (
+                                <div key={n} className="w-2.5 h-2.5 rounded-sm" style={{
+                                  background: n <= selectedSystem.dangerLevel ? color : '#0d2535'
+                                }} />
+                              );
+                            })}
+                          </div>
+                          <span style={{ color: DANGER_COLORS[selectedSystem.dangerLevel] || '#8fb8cc' }}>
+                            {selectedSystem.dangerLevel}/5
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs mt-3 leading-relaxed" style={{ color: '#8fb8cc', fontSize: '0.7rem' }}>
+                      {selectedSystem.description}
+                    </p>
+
+                    {/* Jump points */}
+                    {selectedSystem.jumpPoints?.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-orbitron tracking-widest mb-2" style={{ color: '#8fb8cc', letterSpacing: '0.1em', fontSize: '0.6rem' }}>
+                          JUMP POINTS
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedSystem.jumpPoints.map((jp) => {
+                            const target = STAR_SYSTEMS.find((s) => s.id === jp);
+                            return (
+                              <button
+                                key={jp}
+                                onClick={() => setSelectedSystem(target)}
+                                className="px-2 py-0.5 rounded text-xs transition-all"
+                                style={{ border: '1px solid #0d2535', color: '#00d4ff', background: 'rgba(0,212,255,0.05)', fontSize: '0.65rem' }}
+                              >
+                                <ChevronRight size={9} className="inline" />
+                                {target?.name || jp}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Planets */}
+                    {selectedSystem.planets?.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-orbitron tracking-widest mb-2" style={{ color: '#8fb8cc', letterSpacing: '0.1em', fontSize: '0.6rem' }}>
+                          BODIES ({selectedSystem.planets.length})
+                        </div>
+                        <div className="space-y-1.5">
+                          {selectedSystem.planets.map((planet) => (
+                            <div key={planet.id} className="p-2 rounded border" style={{ borderColor: '#0d2535' }}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ background: planet.color }} />
+                                <span className="text-xs font-orbitron" style={{ color: '#e2e8f0', fontSize: '0.65rem' }}>
+                                  {planet.name}
+                                </span>
+                              </div>
+                              {planet.stations && (
+                                <div className="mt-1 ml-5 space-y-0.5">
+                                  {planet.stations.map((s) => (
+                                    <div key={s} className="text-xs" style={{ color: '#00d4ff', fontSize: '0.6rem' }}>
+                                      ◆ {s}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Local reports */}
+                    {systemReports.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-orbitron tracking-widest mb-2" style={{ color: '#ff2233', letterSpacing: '0.1em', fontSize: '0.6rem' }}>
+                          LOCAL INTEL ({systemReports.length})
+                        </div>
+                        <div className="space-y-1">
+                          {systemReports.slice(0, 3).map((r) => (
+                            <div key={r.id} className="p-2 rounded border text-xs" style={{ borderColor: '#0d2535', color: '#8fb8cc', fontSize: '0.65rem' }}>
+                              <span style={{ color: '#ff2233' }}>T{r.threatLevel}</span> — {r.pirateCount} pirates at {r.location}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4">
+                    <div className="text-center py-8">
+                      <Globe size={32} className="mx-auto mb-3" style={{ color: '#0d2535' }} />
+                      <div className="text-xs font-orbitron tracking-widest" style={{ color: '#8fb8cc', letterSpacing: '0.1em', fontSize: '0.65rem' }}>
+                        SELECT A SYSTEM
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: '#8fb8cc', opacity: 0.5, fontSize: '0.6rem' }}>
+                        Click any star to inspect
+                      </div>
+                    </div>
+
+                    {/* System list */}
+                    <div className="mt-2 space-y-1">
+                      {STAR_SYSTEMS.map((sys) => {
+                        const color = DANGER_COLORS[sys.dangerLevel] || '#8fb8cc';
+                        return (
+                          <button
+                            key={sys.id}
+                            onClick={() => setSelectedSystem(sys)}
+                            className="w-full flex items-center justify-between p-2 rounded border text-left transition-all hover:border-cyan-900"
+                            style={{ borderColor: '#0d2535' }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ background: sys.starColor }} />
+                              <span className="text-xs font-orbitron" style={{ color: '#e2e8f0', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+                                {sys.name}
+                              </span>
+                            </div>
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map((n) => (
+                                <div key={n} style={{ width: '5px', height: '5px', borderRadius: '1px', background: n <= sys.dangerLevel ? color : '#0d2535' }} />
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="h-full"
+              >
+                <StatsPanel />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Right panel toggle */}
+      <button
+        onClick={() => setShowRightPanel(!showRightPanel)}
+        className="absolute right-0 z-20 p-2 glass border-l border-t border-b rounded-l transition-all"
+        style={{
+          top: '50%',
+          transform: 'translateY(-50%)',
+          borderColor: '#0d2535',
+          color: '#8fb8cc',
+          right: showRightPanel ? '320px' : '0',
+        }}
+      >
+        <ChevronRight size={14} style={{ transform: showRightPanel ? 'rotate(0)' : 'rotate(180deg)', transition: 'transform 0.3s' }} />
+      </button>
+
+      {/* Right Panel - Live Feed */}
+      <AnimatePresence>
+        {showRightPanel && (
+          <motion.div
+            initial={{ x: 320 }}
+            animate={{ x: 0 }}
+            exit={{ x: 320 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute right-0 top-0 bottom-0 w-80 glass border-l flex flex-col z-10"
+            style={{ borderColor: '#0d2535' }}
+          >
+            <ReportFeed compact={true} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Map controls bottom-center */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 glass border rounded px-3 py-2 z-10"
+        style={{ borderColor: '#0d2535', left: 'calc(50% + 144px - 160px)' }}>
+        <div className="flex items-center gap-2 text-xs" style={{ color: '#8fb8cc', fontSize: '0.6rem' }}>
+          <span>SCROLL: ZOOM</span>
+          <div className="w-0.5 h-3" style={{ background: '#0d2535' }} />
+          <span>DRAG: ROTATE</span>
+          <div className="w-0.5 h-3" style={{ background: '#0d2535' }} />
+          <span>CLICK: SELECT</span>
         </div>
       </div>
 
       {/* Report form modal */}
-      {showReport && (
-        <ReportForm
-          onClose={() => setShowReport(false)}
-          preselectedSystem={selectedSystem?.id}
-        />
-      )}
+      <AnimatePresence>
+        {showReportForm && (
+          <ReportForm
+            onClose={() => setShowReportForm(false)}
+            defaultSystem={selectedSystem?.id || ''}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
