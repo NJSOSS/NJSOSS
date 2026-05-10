@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #030912;
+  --card: #060f1a;
+  --border: #0d2535;
+  --text: #8fb8cc;
+  --cyan: #00d4ff;
+  --danger: #ff2233;
+  --warning: #ff7700;
+  --safe: #00ff88;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--card);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan);
+}
+
+/* Custom classes */
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.8), 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+.text-glow-danger {
+  text-shadow: 0 0 10px rgba(255, 34, 51, 0.8), 0 0 20px rgba(255, 34, 51, 0.4);
+}
+
+.border-glow-cyan {
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3), inset 0 0 10px rgba(0, 212, 255, 0.05);
+}
+
+.border-glow-danger {
+  box-shadow: 0 0 10px rgba(255, 34, 51, 0.3), inset 0 0 10px rgba(255, 34, 51, 0.05);
+}
+
+.card-hud {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.card-hud-cyan {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+}
+
+/* Pulse animations */
+@keyframes pulse-danger {
+  0%, 100% { box-shadow: 0 0 5px #ff2233, 0 0 10px #ff2233; }
+  50% { box-shadow: 0 0 20px #ff2233, 0 0 40px #ff2233, 0 0 60px rgba(255,34,51,0.4); }
+}
+
+@keyframes pulse-cyan {
+  0%, 100% { box-shadow: 0 0 5px #00d4ff; }
+  50% { box-shadow: 0 0 20px #00d4ff, 0 0 40px rgba(0,212,255,0.4); }
+}
+
+@keyframes glow-cycle {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes scan-line {
+  0% { top: -2px; }
+  100% { top: 100%; }
+}
+
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 0.95; }
+  98% { opacity: 0.7; }
+  99% { opacity: 0.9; }
+}
+
+.animate-pulse-danger { animation: pulse-danger 2s ease-in-out infinite; }
+.animate-pulse-cyan { animation: pulse-cyan 2s ease-in-out infinite; }
+.animate-glow-cycle { animation: glow-cycle 3s ease-in-out infinite; }
+.animate-flicker { animation: flicker 8s linear infinite; }
+
+/* HUD scanline overlay */
+.hud-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 212, 255, 0.015) 2px,
+    rgba(0, 212, 255, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(6, 15, 26, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(13, 37, 53, 0.8);
+}
+
+.glass-light {
+  background: rgba(6, 15, 26, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+}
+
+/* Danger level colors */
+.danger-1 { color: #00ff88; }
+.danger-2 { color: #aaff00; }
+.danger-3 { color: #ffdd00; }
+.danger-4 { color: #ff7700; }
+.danger-5 { color: #ff2233; }
+
+.bg-danger-1 { background-color: rgba(0,255,136,0.15); }
+.bg-danger-2 { background-color: rgba(170,255,0,0.15); }
+.bg-danger-3 { background-color: rgba(255,221,0,0.15); }
+.bg-danger-4 { background-color: rgba(255,119,0,0.15); }
+.bg-danger-5 { background-color: rgba(255,34,51,0.15); }
+
+/* Corner brackets for HUD elements */
+.corner-brackets {
+  position: relative;
+}
+.corner-brackets::before,
+.corner-brackets::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--cyan);
+  border-style: solid;
+}
+.corner-brackets::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+.corner-brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+/* Threat slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
+/* Select styling */
+select {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* Button base */
+.btn-hud {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hud:hover {
+  background: rgba(0, 212, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+.btn-hud-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-hud-danger:hover {
+  background: rgba(255, 34, 51, 0.1);
+  box-shadow: 0 0 15px rgba(255, 34, 51, 0.3);
+}
+
+/* Loading spinner */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Three.js canvas */
+canvas {
+  display: block;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 9, 18, 0.92);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+}
+.tooltip:hover .tooltip-content {
+  display: block;
+}
+.tooltip-content {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  z-index: 10;
+}
